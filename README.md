@@ -23,3 +23,4 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 | 86 | 3655 | 18 | 6m52s | 0 | 2m8s |
 | 106 | 5565 | 24 | 8m9s | 0 | 4m44s |
 | 126 | 7875 | 32 | 9m46s | 0 | 9m40s |
+| 226 | 7875 | N.A | N.A | 0 | 96m54s |
