@@ -48,6 +48,8 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
     force_stop = False
     while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_SAME_COST:
         iter += 1
+
+        #print("[DEBUG] out candidates: ",out_candidates)
         
         new_e = out_candidates.pop(0)
         # Assicurati che l'arco estratto non sia stato (re)inserito 
@@ -61,7 +63,7 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
                 break
             new_e = out_candidates.pop(0)
 
-        cost_before = cost(mst)
+        cost_before = cost(mst, ROOT_NODE)
 
         # Se sono così fortunato da aver trovato la soluzione ottima,
         # ferma tutto (non si può mai migliorare più di così)
@@ -110,7 +112,7 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
             mst.add_edges_from([new_e])
             mst.remove_edges_from([out_e])
 
-            out_candidates.append([out_e])
+            out_candidates.append(out_e)
 
             if DEBUG_IMPROVEMENT:
                 fig = plt.figure(iter)
@@ -135,9 +137,14 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
             
             # Non considerare più l'arco che hai provato a sostituire
             # (Greedy!)
-            out_candidates.append([new_e])
+            out_candidates.append(new_e)
 
-    return mst
+    return {
+        "solution": mst,
+        "cost": cost(mst, root_node=ROOT_NODE),
+        "elapsed_iterations": iter,
+        "since_last_improvement_iterations": iters_since_last_improvement
+    }
 
 
 def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, MAX_ITER_SAME_COST=MAX_ITER_SAME_COST):
@@ -294,5 +301,5 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
         "solution": S_best,
         "cost": cost(S_best, root_node=ROOT_NODE),
         "elapsed_iterations": iter,
-        "since_last_improvement_iterations": iters_since_last_improvement #>= MAX_ITER_SAME_COST
+        "since_last_improvement_iterations": iters_since_last_improvement
     }
