@@ -14,6 +14,8 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 > random seed: 191295  
 > root node: 7
 
+> Note: Tabu search w/ Depth first initializer scores 0 at first try on this generator.
+
 | #Nodes | #Edges | Best cost (Greedy) | CPU Time (Greedy) | Best cost (LS) | CPU Time (LS) | Best cost (Tabu Search) | CPU Time (Tabu Search) |
 |--------|--------|-----|--------|-----|--------|-----|--------|
 |      8 |     28 |   0 |   0.2s |   1 |   0.1s |   0 |   0.1s | 
@@ -26,6 +28,14 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 |    226 |  25425 |   0 |   0.2s | N.A |    N.A |   0 | 96m54s |
 <!-- N        E    BestGr TimeGr  BestLS TimeLS BestTabu TimeTabu-->
 
+
+**Generator: SPARSE**
+> \<TODO>
+
+|          | #Nodes | #Edges | Initial cost | Final Cost | CPU Time |
+|----------|--------|--------|--------------|------------|----------|
+| Tabu + Kruskal initializer |        336 | 969 | 226 | 39 | 17m26s | 
+| Tabu + Depth First initializer |    336 | 969 | 115 | 41 | 11m16s |
 
 
 **Generator: NOT_BEST_PATH**
