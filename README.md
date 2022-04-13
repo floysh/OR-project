@@ -23,8 +23,25 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 |     86 |   3655 |   0 |   0.2s |  18 |  6m52s |   0 |   2m8s |
 |    106 |   5565 |   0 |   0.2s |  24 |  8m09s |   0 |  4m44s |
 |    126 |   7875 |   0 |   0.3s |  32 |  9m46s |   0 |  9m40s |
-|    226 |  25425 |   0 |   0.2s | N.A |    N.A |   0 | 96m54s |
+|    226 |  25425 |   0 |   0.2s | --- |  ----- |   0 | 96m54s |
 <!-- N        E    BestGr TimeGr  BestLS TimeLS BestTabu TimeTabu-->
+
+
+**Generator: SPARSE**
+
+> random seed: 191295  
+> root node: 7
+
+| #Nodes | #Edges | Best cost (Greedy) | CPU Time (Greedy) | Best cost (LS) | CPU Time (LS) | Best cost (Tabu Search) | CPU Time (Tabu Search) |
+|--------|--------|-----|--------|-----|--------|-----|--------|
+|      8 |        |     |        |     |        |     |        |
+|     16 |        |     |        |     |        |     |        |
+|     26 |        |     |        |     |        |     |        |
+|     49 |        |     |        |     |        |     |        |
+|     86 |        |     |        |     |        |     |        |
+|    106 |        |     |        |     |        |     |        |
+|    126 |        |     |        |     |        |     |        |
+|    226 |    669 |  74 |   0.2s | --- |  ----- |  19 | 32m17s |
 
 
 
@@ -35,7 +52,7 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 
 | #Nodes | #Edges | Best cost (Greedy) | CPU Time (Greedy) | Best cost (LS) | CPU Time (LS) | Best cost (Tabu Search) | CPU Time (Tabu Search) |
 |--------|--------|-----|--------|-----|--------|-----|--------|
-|      8 |    N.A | N.A |    N.A | N.A |    N.A | N.A |    N.A | 
+|      8 |    --- | --- |   ---- | --- |  ----- | --- |  ----- | 
 |     16 |     20 |   9 |   0.1s |     |        |   9 |  11.3s |
 |     26 |     55 |  10 |   0.2s |     |        |   9 |  29.5s |
 |     49 |    133 |  22 |   0.2s |     |        |  19 |  57.1s |
