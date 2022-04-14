@@ -1,4 +1,6 @@
+from cmath import exp
 import os
+import random
 import networkx as nx
 
 from shared import *
@@ -14,7 +16,7 @@ if not "SAVE_STEP_GRAPHS" in globals():
 
 # search parameters
 MAX_ITER = 1000
-MAX_ITER_SAME_COST = 500
+MAX_ITER_NO_IMPROVEMENT = 500
 
 
 
@@ -46,7 +48,7 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
     global iters_since_last_improvement
     iters_since_last_improvement = 0
     force_stop = False
-    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_SAME_COST:
+    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT:
         iter += 1
 
         #print("[DEBUG] out candidates: ",out_candidates)
@@ -114,6 +116,8 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
 
             out_candidates.append(out_e)
 
+            print("[INFO] S_{} cost={}".format(iter,cost_after))
+
             if DEBUG_IMPROVEMENT:
                 fig = plt.figure(iter)
                 plt.title("add: {}, remove: {}".format(new_e, out_e))
@@ -147,7 +151,7 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
     }
 
 
-def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, MAX_ITER_SAME_COST=MAX_ITER_SAME_COST):
+def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, MAX_ITER_NO_IMPROVEMENT=MAX_ITER_NO_IMPROVEMENT):
     # compatibilità vecchio codice
     mst = start_solution
 
@@ -182,8 +186,13 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
 
     global iters_since_last_improvement
     iters_since_last_improvement = 0
-    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_SAME_COST:
+    T = 0.2*(cost_best)
+    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT:
         iter += 1
+
+        # Simulated annealing-like
+        if iters_since_last_improvement % 50:
+            T = T*0.5
         
         new_e = out_candidates.pop(0)
         # Assicurati che l'arco estratto non sia stato (re)inserito 
@@ -224,20 +233,25 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
             temp.remove_edges_from([e])
             
             cost_after = cost(temp, root_node=ROOT_NODE)
-
-            # Penalizza le mosse proibite!
-            if e in tabu_list:
-                cost_after += G.number_of_nodes()
             
             step = (cost_after, e)
-            Moves.append(step)
 
-            # Smetti di esplorare appena trovi una mossa migliorativa
-            # OK perchè scambiando archi il massimo decremento di costo è 1
-            # per ogni iterazione
-            if cost_after < cost_before:
-                move_k = step
-                break
+            if e in tabu_list:
+                # Criterio di aspirazione:
+                # accetta mosse proibite (solo) se portano a soluzioni
+                # migliori dell'ottimo candidato
+                Moves.append(step)
+                if cost_after < cost_best:
+                    move_k = step
+                    break
+            else: 
+                Moves.append(step)
+                # Smetti di esplorare appena trovi una mossa migliorativa
+                # OK perchè scambiando archi il massimo decremento di costo è 1
+                # per ogni iterazione
+                if cost_after < cost_before:
+                    move_k = step
+                    break
             
         # Se non hai trovato mosse che migliorano la soluzione
         # prendi la meno peggio
@@ -265,6 +279,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
             # la soluzione attuale è la nuova sol. migliore
             S_best = mst.copy()
             cost_best = cost_k
+            print("[INFO] S_{} cost={}".format(iter,cost_k))
 
             # L'arco che non entra in soluzione deve tornare
             # nel grafo complementare
@@ -274,27 +289,56 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
         else:
             iters_since_last_improvement += 1
 
-            if cost_k <= cost_before: #and (out_e not in tabu_list):
-                # La mossa migliore non è proibita (non esploro mosse proibite)
-                # ma non abbassa il costo della soluzione.
-                # Continuo a esplorare
-                # 
-                if len(tabu_list) == TABU_SIZE:
-                    e = tabu_list.pop(0)
-                    out_candidates.append(e)
-                tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
+            if out_e not in tabu_list:
+                if cost_k <= cost_before:
+                    # La mossa migliore non è proibita 
+                    # (le mosse proibite vengono ignorate se 
+                    #  non migliorano l'ottimo candidato)
+                    # è un miglioramento ma non abbassa il costo della soluzione ottima.
+                    #
+                    # Continuo a esplorare
+                    # 
+                    if len(tabu_list) == TABU_SIZE:
+                        e = tabu_list.pop(0)
+                        out_candidates.append(e)
+                    tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
 
-                tabu_list.pop(0)
+                    tabu_list.pop(0)
 
 
-                out_candidates.append(out_e)
-            else:
-                # Sto peggiorando o facendo cose proibite che non vanno bene,
-                # annulla tutto
-                mst.remove_edges_from([new_e])
-                mst.add_edges_from([out_e])
+                    out_candidates.append(out_e)
+                else:
+                    # Sto peggiorando
+                    #
+                    # Sperimentalmente, questo approccio ha fatto raggiungere
+                    # soluzioni migliori in meno iterazioni
+                    #
+                    # Approccio ibrido:
+                    # (a mo' di simulated annealing)
+                    # Ogni tanto accetto un peggioramento
+                    # per provare a uscire dal bacino di attrazione dell'ottimo locale
 
-                out_candidates.append(new_e) # lo metto in fondo per provare a fare altri scambi prima di ripescarlo
+                    # Accetta più facilmente se sono tante iterazioni che non si migliora nulla
+                    deltaE = (cost_after-cost_before)
+                    #T = 0.2*(cost_best)
+                    #p = exp(-deltaE/T).real
+                    if T > 0 and (random.random() < exp(-deltaE/T).real):
+                        #print("[INFO] S_{}, cost: {} (peggiora), T:{}".format(iter,cost_after,T))
+                        if len(tabu_list) == TABU_SIZE:
+                            e = tabu_list.pop(0)
+                            out_candidates.append(e)
+                        tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
+
+                        out_candidates.append(out_e)
+                    else:
+                        # annulla tutto!
+                        mst.remove_edges_from([new_e])
+                        mst.add_edges_from([out_e])
+
+                        out_candidates.append(new_e) # lo metto in fondo per provare a fare altri scambi prima di ripescarlo
+
+
+
 
 
     return {
