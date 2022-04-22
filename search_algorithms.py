@@ -187,12 +187,18 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
     global iters_since_last_improvement
     iters_since_last_improvement = 0
     T = 0.2*(cost_best)
+    
     while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT:
         iter += 1
 
         # Simulated annealing-like
-        if iters_since_last_improvement % 50:
-            T = T*0.5
+        if T > 0 and ((iters_since_last_improvement+1) % 50) == 0:
+            if T < 0.18:
+                T = 0 # frozen
+                print("[INFO] T = 0 (frozen)")
+            else:
+                T = T*0.5
+                print("[INFO] temperatura diminuita: T = ",T)
         
         new_e = out_candidates.pop(0)
         # Assicurati che l'arco estratto non sia stato (re)inserito 
@@ -319,11 +325,11 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                     # per provare a uscire dal bacino di attrazione dell'ottimo locale
 
                     # Accetta più facilmente se sono tante iterazioni che non si migliora nulla
-                    deltaE = (cost_after-cost_before)
+                    deltaE = (cost_after-cost_best)
                     #T = 0.2*(cost_best)
                     #p = exp(-deltaE/T).real
-                    if T > 0 and (random.random() < exp(-deltaE/T).real):
-                        #print("[INFO] S_{}, cost: {} (peggiora), T:{}".format(iter,cost_after,T))
+                    if T > 0.001 and (random.random() < exp(-deltaE/T).real):
+                        print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
                         if len(tabu_list) == TABU_SIZE:
                             e = tabu_list.pop(0)
                             out_candidates.append(e)
