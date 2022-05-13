@@ -41,6 +41,59 @@ def cost(MST, root_node, debug=False):
 
 
 
+# GREEDY
+
+# Creazione di MST con radice specificata tramite visita in ampiezza
+def build_rooted_mst(graph, root_node):
+    visited_nodes = set() # per evitare cicli
+    next_visit = []
+
+    MST = nx.Graph()
+
+    #MST.add_node(n1) # non necessario, aggiunti in automatico con gli archi
+
+    #next_visit = list(G.adj[root_node]) # inserisci i vicini del nodo di partenza
+
+    next_visit.insert(0,root_node) # assicurati di partire dal nodo radice!
+    #for n in next_visit:
+    while len(next_visit) > 0:
+        n = next_visit.pop(0)
+        # processa un nodo solo se non è già stato visitato
+        if n not in visited_nodes:
+            visited_nodes.add(n)
+            # aggiungi i suoi vicini non visitati alla lista/stack di visita
+            unvisited_neighbourhood = [x for x in list(G.adj[n]) if x not in visited_nodes]
+            #print("n = ",n)
+            #print("unvisited_neighbourhood = ",unvisited_neighbourhood)
+            #print("(before loop) next_visit = ",next_visit)
+            # inserimento in testa -> depth first?
+            next_visit = unvisited_neighbourhood + next_visit
+            for neighbour in unvisited_neighbourhood:
+                if neighbour not in MST.nodes:
+                    #print("MST edge added: ", (n,neighbour))
+                    MST.add_edge(n,neighbour)
+            #print("(after loop) next_visit = ",next_visit) 
+        #else:
+            #print("n = ", n, "(ignored)")
+
+    return MST
+
+
+
+# Creazione di MST con radice specificata tramite visita in profondità
+def build_depth_first_mst(graph, root_node):
+    MST = nx.Graph()
+    return __recursive_depth_first(graph, root_node, MST)
+
+def __recursive_depth_first(graph, node, MST):
+    # MST è una risorsa condivisa tra le ricorsioni
+    # TODO: trovare un modo più elegante di aggiornarlo
+    children = graph.adj[node]
+    for child in children:
+        if child not in MST.nodes:
+            MST.add_edge(node, child)
+            MST = __recursive_depth_first(graph, child, MST)
+    return MST
 
 
 

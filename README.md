@@ -61,10 +61,22 @@ In other words, given a spanning tree, oriented from the root, each nonleaf node
 | #Nodes | #Edges | Best cost (Greedy) | CPU Time (Greedy) | Best cost (LS) | CPU Time (LS) | Best cost (Tabu Search) | CPU Time (Tabu Search) |
 |--------|--------|-----|--------|-----|--------|-----|--------|
 |      8 |    --- | --- |   ---- | --- |  ----- | --- |  ----- | 
-|     16 |     20 |   9 |   0.1s |     |        |   9 |  11.3s |
-|     26 |     55 |  10 |   0.2s |     |        |   9 |  29.5s |
-|     49 |    133 |  22 |   0.2s |     |        |  19 |  57.1s |
-|     86 |    265 |  39 |   0.1s |     |        |  33 |  2m29s |
-|    106 |    335 |  52 |   0.3s |     |        |  41 |  3m32s |
-|    126 |    405 |  61 |   0.1s |     |        |  49 |  4m30s |
-|    226 |    775 | 112 |   0.2s |     |        |  89 | 11m51s |
+|     16 |     20 |   9 |   0.1s |   9 |   2.0s |   9 |  11.3s |
+|     26 |     55 |  10 |   0.2s |  10 |  4.37s |   9 |  29.5s |
+|     49 |    133 |  22 |   0.2s |  19 | 10.78s |  19 |  57.1s |
+|     86 |    265 |  39 |   0.1s |  35 | 33.11s |  33 |  2m29s |
+|    106 |    335 |  52 |   0.3s |  43 | 53.03s |  41 |  3m32s |
+|    126 |    405 |  61 |   0.1s |  52 | 60.93s |  49 |  4m30s |
+|    226 |    775 | 112 |   0.2s |  93 |   3m1s |  89 | 11m51s |
+
+
+> \<TODO>
+
+|          | #Nodes | #Edges | Initial cost | Final Cost | CPU Time |
+|----------|--------|--------|--------------|------------|----------|
+| Local + Depth First initializer |   ??? | ???? | ??? | ??? | ?????? |
+| Tabu + Kruskal initializer |        ??? | ???? | ??? | ??? | ?????? |
+| Tabu + Depth First initializer |    226 |  775 | 110 | ??? | ?????? |
+| Local + Depth First initializer |   326 | 1105 | 163 | 139 |  6m25s |
+| Tabu + Kruskal initializer |        326 | 1105 | 256 | 129 | 16m38s | 
+| Tabu + Depth First initializer |    326 | 1105 | 163 | 129 | 13m54s |

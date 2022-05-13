@@ -35,7 +35,6 @@ def __recursive_depth_first(graph, node, MST):
     return MST
 
 
-
 def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
     # compatibilità vecchio codice
     mst = start_solution 
@@ -184,6 +183,12 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
     # processando sempre gli stessi archi
     tabu_list = []
 
+    # Metto qui gli Archi cattivi che portano solo a peggioramenti 
+    # (per il valore di cost() corrente)
+    # così evito di ritornarci.
+    # Li rimetto in out_candidates quando trovo sol. di costo inferiore
+    ignore_list = []
+
     global iter; iter = 0
 
     if DEBUG_IMPROVEMENT:
@@ -203,12 +208,18 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
     global iters_since_last_improvement
     iters_since_last_improvement = 0
     T = 0.2*(cost_best)
-    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT:
+    
+    while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT and len(out_candidates) > 0:
         iter += 1
 
         # Simulated annealing-like
-        if iters_since_last_improvement % 50:
-            T = T*0.5
+        if iters_since_last_improvement > 300 and T > 0 and ((iters_since_last_improvement+1) % 50) == 0:
+            if T < 0.18:
+                T = 0 # frozen
+                print("[INFO] T = 0 (frozen)")
+            else:
+                T = T*0.5
+                print("[INFO] temperatura diminuita: T = ",T)
         
         new_e = out_candidates.pop(0)
         # Assicurati che l'arco estratto non sia stato (re)inserito 
@@ -244,7 +255,11 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
         # Esplorazione intorno
         Moves = []
         move_k = None
-        for e in [x for x in loop_edges if (x != new_e)]:
+
+        non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
+        optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == ROOT_NODE and x == 1)]
+
+        for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e) and x not in non_optimal_nodes and y not in non_optimal_nodes]:
             temp = mst.copy()
             temp.remove_edges_from([e])
             
@@ -301,6 +316,9 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
             # nel grafo complementare
             out_candidates.append(out_e)
 
+            # Rimetti gli archi "cattivi" tra i candidati
+            out_candidates = out_candidates + ignore_list
+
             iters_since_last_improvement = 0
         else:
             iters_since_last_improvement += 1
@@ -335,11 +353,11 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                     # per provare a uscire dal bacino di attrazione dell'ottimo locale
 
                     # Accetta più facilmente se sono tante iterazioni che non si migliora nulla
-                    deltaE = (cost_after-cost_before)
+                    deltaE = (cost_after-cost_best)
                     #T = 0.2*(cost_best)
                     #p = exp(-deltaE/T).real
-                    if T > 0 and (random.random() < exp(-deltaE/T).real):
-                        #print("[INFO] S_{}, cost: {} (peggiora), T:{}".format(iter,cost_after,T))
+                    if iters_since_last_improvement > 300 and  T > 0.001 and (random.random() < exp(-deltaE/T).real):
+                        print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
                         if len(tabu_list) == TABU_SIZE:
                             e = tabu_list.pop(0)
                             out_candidates.append(e)
@@ -351,7 +369,25 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                         mst.remove_edges_from([new_e])
                         mst.add_edges_from([out_e])
 
-                        out_candidates.append(new_e) # lo metto in fondo per provare a fare altri scambi prima di ripescarlo
+                        # arco cattivo, non considerarlo più per un po'
+                        #if len(tabu_list) == TABU_SIZE:
+                        #    e = tabu_list.pop(0)
+                        #    out_candidates.append(e)
+                        #tabu_list.append(out_e)
+                        
+                        # In alternativa alla tabu list principale provo a usare
+                        # questa specie di tabu list secondaria, più restrittiva,
+                        # che rende proibite le mosse cattive fino a quando non si migliora la f.o
+                        ignore_list.append(new_e) 
+
+
+
+                    # DIVERSIFICAZIONE
+                    if iters_since_last_improvement > MAX_ITER_NO_IMPROVEMENT/3:
+                        # TODO: applica mossa di diversificazione
+                        True
+
+
 
 
 
