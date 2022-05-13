@@ -14,9 +14,25 @@ if not "SAVE_STEP_GRAPHS" in globals():
     SAVE_STEP_GRAPHS = False
 
 
-# search parameters
+# default search parameters
 MAX_ITER = 1000
 MAX_ITER_NO_IMPROVEMENT = 500
+
+# Creazione di MST con radice specificata tramite visita in profondità
+def greedy_depth_first(G, ROOT_NODE):
+    MST = nx.Graph()
+    return __recursive_depth_first(G, ROOT_NODE, MST)
+
+def __recursive_depth_first(graph, node, MST):
+    # MST è una risorsa condivisa tra le ricorsioni
+    # TODO: trovare un modo più elegante di aggiornarlo
+    children = graph.adj[node]
+    for child in children:
+        if child not in MST.nodes:
+            MST.add_edge(node, child)
+            MST = __recursive_depth_first(graph, child, MST)
+
+    return MST
 
 
 
