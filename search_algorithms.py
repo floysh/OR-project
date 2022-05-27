@@ -257,6 +257,8 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
         move_k = None
 
         non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
+        
+        # questo qui è buggato? usare quello sopra, per ora
         optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == ROOT_NODE and x == 1)]
 
         for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e) and x not in non_optimal_nodes and y not in non_optimal_nodes]:
@@ -356,14 +358,15 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                     deltaE = (cost_after-cost_best)
                     #T = 0.2*(cost_best)
                     #p = exp(-deltaE/T).real
-                    if iters_since_last_improvement > 300 and  T > 0.001 and (random.random() < exp(-deltaE/T).real):
-                        print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
-                        if len(tabu_list) == TABU_SIZE:
-                            e = tabu_list.pop(0)
-                            out_candidates.append(e)
-                        tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
+                    if iters_since_last_improvement > 300 and deltaE <= 3:  
+                        if T > 0.001 and (random.random() < exp(-deltaE/T).real):
+                            print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
+                            if len(tabu_list) == TABU_SIZE:
+                                e = tabu_list.pop(0)
+                                out_candidates.append(e)
+                            tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
 
-                        out_candidates.append(out_e)
+                            out_candidates.append(out_e)
                     else:
                         # annulla tutto!
                         mst.remove_edges_from([new_e])
