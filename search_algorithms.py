@@ -35,7 +35,7 @@ def __recursive_depth_first(graph, node, MST):
     return MST
 
 
-def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
+def local_search(G, start_solution, ROOT_NODE, MAX_ITER, **kwargs):
     # compatibilità vecchio codice
     mst = start_solution 
 
@@ -166,9 +166,13 @@ def local_search(G, start_solution, ROOT_NODE, MAX_ITER):
     }
 
 
-def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, MAX_ITER_NO_IMPROVEMENT=MAX_ITER_NO_IMPROVEMENT):
+def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
     # compatibilità vecchio codice
     mst = start_solution
+
+    MAX_ITER = kwargs.get("MAX_ITER", 3000);
+    MAX_ITER_NO_IMPROVEMENT = kwargs.get("MAX_ITER_NO_IMPROVEMENT",1000);
+    MAX_ITER_BEFORE_ASCEND = kwargs.get("MAX_ITER_BEFORE_ASCEND", 450);
 
     # calcolo il grafo complementare all'MST
     outer_G = G.copy()
@@ -211,9 +215,15 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
     
     while iter < MAX_ITER and iters_since_last_improvement < MAX_ITER_NO_IMPROVEMENT and len(out_candidates) > 0:
         iter += 1
+        
+        #non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
+        optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == ROOT_NODE and x == 1)]
+
+        # TEST
+        #optimal_nodes = []
 
         # Simulated annealing-like
-        if iters_since_last_improvement > 300 and T > 0 and ((iters_since_last_improvement+1) % 50) == 0:
+        if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and T > 0 and ((iters_since_last_improvement+1) % 50) == 0:
             if T < 0.18:
                 T = 0 # frozen
                 print("[INFO] T = 0 (frozen)")
@@ -242,6 +252,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
             print("MST=", list(mst.edges))
             print("add: ",new_e)
 
+
         mst.add_edges_from([new_e])
 
         # loop detection
@@ -256,43 +267,48 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
         Moves = []
         move_k = None
 
-        non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
-        
-        # questo qui è buggato? usare quello sopra, per ora
-        optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == ROOT_NODE and x == 1)]
-
-        for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e) and x not in non_optimal_nodes and y not in non_optimal_nodes]:
+        for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e) and (x not in optimal_nodes or y not in optimal_nodes)]:
             temp = mst.copy()
             temp.remove_edges_from([e])
             
             cost_after = cost(temp, root_node=ROOT_NODE)
             
-            step = (cost_after, e)
+            move = {"cost_after": cost_after, "in": new_e, "out": e}
 
             if e in tabu_list:
                 # Criterio di aspirazione:
                 # accetta mosse proibite (solo) se portano a soluzioni
                 # migliori dell'ottimo candidato
-                Moves.append(step)
+                Moves.append(move)
                 if cost_after < cost_best:
-                    move_k = step
+                    move_k = move
                     break
             else: 
-                Moves.append(step)
+                Moves.append(move)
                 # Smetti di esplorare appena trovi una mossa migliorativa
                 # OK perchè scambiando archi il massimo decremento di costo è 1
                 # per ogni iterazione
                 if cost_after < cost_before:
-                    move_k = step
+                    move_k = move
                     break
+
+        # Se tutti gli archi del ciclo intersecano nodi ottimali, non ha senso rimuoverli?
+        if len(Moves) == 0:
+            ignore_list.append(new_e)
+            continue
             
         # Se non hai trovato mosse che migliorano la soluzione
         # prendi la meno peggio
         if move_k == None:
-            Moves.sort()
-            move_k = Moves.pop(0) # ordina in base al costo e prende la prima mossa
-        cost_k = move_k[0]
-        out_e = move_k[1]
+            #Moves.sort()
+            #move_k = Moves.pop(0) # ordina in base al costo e prende la prima mossa
+            move_k = Moves.pop(0)
+            for m in Moves:
+                if m["cost_after"] < move_k["cost_after"]:
+                    move_k = m
+
+        cost_k = move_k["cost_after"]
+        out_e = move_k["out"]
         
         # applico la mossa -> genero S_k
         mst.add_edges_from([new_e])
@@ -358,7 +374,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                     deltaE = (cost_after-cost_best)
                     #T = 0.2*(cost_best)
                     #p = exp(-deltaE/T).real
-                    if iters_since_last_improvement > 300 and deltaE <= 3:  
+                    if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and deltaE <= 3:  
                         if T > 0.001 and (random.random() < exp(-deltaE/T).real):
                             print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
                             if len(tabu_list) == TABU_SIZE:
@@ -367,6 +383,8 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                             tabu_list.append(new_e) # è proibito rimuovere il nuovo arco
 
                             out_candidates.append(out_e)
+
+                            out_candidates = out_candidates + ignore_list
                     else:
                         # annulla tutto!
                         mst.remove_edges_from([new_e])
@@ -389,6 +407,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, MAX_ITER=MAX_ITER, M
                     if iters_since_last_improvement > MAX_ITER_NO_IMPROVEMENT/3:
                         # TODO: applica mossa di diversificazione
                         True
+
 
 
 
