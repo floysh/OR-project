@@ -35,9 +35,10 @@ def __recursive_depth_first(graph, node, MST):
     return MST
 
 
-def local_search(G, start_solution, ROOT_NODE, MAX_ITER, **kwargs):
+def local_search(G, start_solution, ROOT_NODE, **kwargs):
     # compatibilità vecchio codice
     mst = start_solution 
+    MAX_ITER = kwargs.get("MAX_ITER", 3000);
 
     # calcolo il grafo complementare all'MST
     outer_G = G.copy()
@@ -218,18 +219,6 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
         
         #non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
         optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == ROOT_NODE and x == 1)]
-
-        # TEST
-        #optimal_nodes = []
-
-        # Simulated annealing-like
-        if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and T > 0 and ((iters_since_last_improvement+1) % 50) == 0:
-            if T < 0.18:
-                T = 0 # frozen
-                print("[INFO] T = 0 (frozen)")
-            else:
-                T = T*0.5
-                print("[INFO] temperatura diminuita: T = ",T)
         
         new_e = out_candidates.pop(0)
         # Assicurati che l'arco estratto non sia stato (re)inserito 
@@ -267,7 +256,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
         Moves = []
         move_k = None
 
-        for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e) and (x not in optimal_nodes or y not in optimal_nodes)]:
+        for e in [(x,y) for (x,y) in loop_edges if ((x,y) != new_e)]:
             temp = mst.copy()
             temp.remove_edges_from([e])
             
@@ -300,12 +289,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
         # Se non hai trovato mosse che migliorano la soluzione
         # prendi la meno peggio
         if move_k == None:
-            #Moves.sort()
-            #move_k = Moves.pop(0) # ordina in base al costo e prende la prima mossa
-            move_k = Moves.pop(0)
-            for m in Moves:
-                if m["cost_after"] < move_k["cost_after"]:
-                    move_k = m
+            move_k = min(Moves, key = lambda x : x["cost_after"])
 
         cost_k = move_k["cost_after"]
         out_e = move_k["out"]
@@ -375,8 +359,9 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
                     #T = 0.2*(cost_best)
                     #p = exp(-deltaE/T).real
                     if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and deltaE <= 3:  
-                        if T > 0.001 and (random.random() < exp(-deltaE/T).real):
-                            print("[INFO] S_{}, cost: {} (peggiora), T:{}, last improvement: {} iters ago".format(iter,cost_after,T,iters_since_last_improvement))
+                        if random.random() < 0.15:
+                            print("[INFO] S_{}, cost: {} (peggiora), last improvement: {} iters ago".format(iter,cost_after,iters_since_last_improvement))
+                            
                             if len(tabu_list) == TABU_SIZE:
                                 e = tabu_list.pop(0)
                                 out_candidates.append(e)

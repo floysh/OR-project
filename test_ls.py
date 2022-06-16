@@ -53,6 +53,8 @@ print("Costo finale: ", cost(mst, ROOT_NODE), "(in",(end_time-start_time),"secon
 
 print("")
 print("---DETTAGLI---")
+print("Costo finale: ", cost(mst, ROOT_NODE))
+print("Tempo di esecuzione: ",(end_time-start_time),"secondi")
 print("Iterazioni complessive eseguite: {}/{}".format(iter,MAX_ITER))
 print("Nodi non ottimali (nodo: n. figli): ",[{n: x-(ROOT_NODE!=n)*1} for (n,x) in mst.degree() if x > 2])
 V = G.number_of_nodes()

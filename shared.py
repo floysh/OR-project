@@ -99,6 +99,17 @@ def __recursive_depth_first(graph, node, MST):
 
 # Alcune funzioni di supporto
 
+def get_optimal_nodes(mst, root_node):
+    optimal_nodes = [(n, {"degree": x-(root_node!=n)*1}) for (n,x) in mst.degree() if x <= 2 or (n == root_node and x == 1)]
+    return optimal_nodes
+
+def get_non_optimal_nodes(mst, root_node):
+    # Nodi di grado 3 + la radice se ha grado 2
+    non_optimal_nodes = [(n, {"degree": x-(root_node!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == root_node and x > 1)]
+    return non_optimal_nodes
+
+
+
 def draw_graph(G, MST=nx.empty_graph(), root_node=None):
     # adapted from:
     # https://stackoverflow.com/questions/60164893/highlighting-certain-nodes-edges-in-networkx-issues-with-using-zip
