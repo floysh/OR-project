@@ -346,18 +346,10 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
                 else:
                     # Sto peggiorando
                     #
-                    # Sperimentalmente, questo approccio ha fatto raggiungere
-                    # soluzioni migliori in meno iterazioni
-                    #
-                    # Approccio ibrido:
-                    # (a mo' di simulated annealing)
-                    # Ogni tanto accetto un peggioramento
-                    # per provare a uscire dal bacino di attrazione dell'ottimo locale
-
-                    # Accetta più facilmente se sono tante iterazioni che non si migliora nulla
+                    # Non peggiorare troppo
+                    # (poche mosse migliorative, se degrado molto sol. 
+                    #  va a finire che non miglioro più)
                     deltaE = (cost_after-cost_best)
-                    #T = 0.2*(cost_best)
-                    #p = exp(-deltaE/T).real
                     if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and deltaE <= 3:  
                         if random.random() < 0.15:
                             print("[INFO] S_{}, cost: {} (peggiora), last improvement: {} iters ago".format(iter,cost_after,iters_since_last_improvement))
