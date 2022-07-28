@@ -53,22 +53,94 @@ print("")
 
 
 print("---INIZIO OTTMIZZAZIONE---")
-print("Ottimizzatore: TABU_SEARCH")
+print("Ottimizzatore: ITERATED TABU_SEARCH")
 print("   TABU_SIZE:",TABU_SIZE)
 print("   MAX_ITER:",MAX_ITER)
 print("   MAX_ITER_NO_IMPROVEMENT:",MAX_ITER_NO_IMPROVEMENT)
 
 start_time = tick()
 
-results = tabu_search(G, start_solution=mst, ROOT_NODE=ROOT_NODE, 
-                        TABU_SIZE=TABU_SIZE, 
-                        MAX_ITER_BEFORE_ASCEND=MAX_ITER_BEFORE_ASCEND,
-                        MAX_ITER=MAX_ITER, MAX_ITER_NO_IMPROVEMENT=MAX_ITER_NO_IMPROVEMENT)
-mst = results["solution"]
 
+# Iterative Tabu Search
+# no random restart perchè soluzioni buone <<<<< soluzioni mediocri
+# Tabu Search + accettazione probabilistica dei peggioramenti
+best_cost = G.number_of_nodes() - 1
+n_hang = 0
+S_elite = []
+
+for i in range(1,MAX_RESTART+1):
+    print("[INFO] Inizio step {}/{}".format(i,MAX_RESTART))
+    results = tabu_search(G, start_solution=mst, ROOT_NODE=ROOT_NODE, 
+                            TABU_SIZE=TABU_SIZE, 
+                            MAX_ITER_BEFORE_ASCEND=MAX_ITER_BEFORE_ASCEND,
+                            MAX_ITER=MAX_ITER, MAX_ITER_NO_IMPROVEMENT=MAX_ITER_NO_IMPROVEMENT)
+    mst = results["solution"]
+    cost_i = cost(mst, ROOT_NODE)
+
+    print("[INFO] Step {}/{} completato. Costo: {}".format(i,MAX_RESTART,cost_i))
+    MAX_ITER_BEFORE_ASCEND += 150
+    MAX_ITER_NO_IMPROVEMENT += 100
+
+    S_elite.append({"mst": mst.copy(), "cost": cost_i})
+
+    if cost_i < best_cost:
+        cost_best = cost_i
+        if cost_i == 0:
+            break
+    else:
+        n_hang += 1
+    if n_hang > 2:
+        print("[INFO] Stallo raggiunto")
+        break
+
+    # Diversificazione/Intensificazione
+    # tolgo un arco e lo sostituisco con 
+    # un altro arco del taglio che si crea
+    #
+    # non posso usare robe come 
+    # 2-opt o city swap perchè il grafo non è completo
+    non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
+    non_optimal_nodes.sort(key=lambda x : x [1]["degree"], reverse=True) # sort by max degree
+
+    for n1 in non_optimal_nodes[0:DIVERSIFICATION_BATCH_SIZE]:
+        n1 = n1[0]
+        for n2 in mst.adj[n1]:
+            remove_candidate = (n1,n2)
+            temp = mst.copy() # necessario per evitare RuntimeError: dictionary changed size during iteration
+            # Destroy 
+            temp.remove_edges_from([remove_candidate]);
+
+            # Repair
+            pool = list(build_depth_first_mst(temp, remove_candidate[0]).nodes) # nodi raggiungibili da una delle estremità dell'arco rimosso
+            cut = networkx.edge_boundary(G, pool) # archi del taglio creatosi eliminando remove_candidate
+
+            best_swap = {"out": remove_candidate, "in": remove_candidate, "cost": 2*cost_i}
+            for insert_candidate in [e for e in cut if e != remove_candidate]:
+                temp.add_edges_from([insert_candidate])
+                deltaC = best_swap["cost"] - cost(temp, ROOT_NODE)
+                if deltaC > 0:
+                    best_swap = {"out": remove_candidate, "in": insert_candidate, "cost": cost(temp, ROOT_NODE)}
+                temp.remove_edges_from([insert_candidate])
+
+        # Applica mossa di diversificazione
+        print("[INFO] Perturbazione")
+        print("       out: {} in: {}".format(best_swap["out"],best_swap["in"]))
+        mst.remove_edges_from([best_swap["out"]])
+        mst.add_edges_from([best_swap["in"]])
+        print("[INFO] Costo: ",cost(mst,ROOT_NODE))
+                    
+
+    
+    # TODO: Prove con Path Relinking
+    if False and i > 1:
+        S_i = S_elite.pop()
+        Moves = mst.copy()
+        Moves.remove_edges_from(S_i.edges)
 
 end_time = tick()
 
+# Prendi la soluzione migliore prodotta
+mst = min(S_elite, key=lambda s : s["cost"])["mst"]
 
 
 iter = results["elapsed_iterations"]
@@ -84,7 +156,7 @@ print("Costo finale: ", cost(mst, ROOT_NODE))
 print("Tempo di esecuzione: ",(end_time-start_time),"secondi")
 #print("Iterazioni complessive eseguite: {}/{}".format(iter,MAX_ITER))
 #print("Iterazioni eseguite dall'ultimo miglioramento di funzione obiettivo: {}/{}".format(iters_since_last_improvement ,MAX_ITER_NO_IMPROVEMENT))
-#print("Stallo raggiunto: ", n_hang > 2)
+print("Stallo raggiunto: ", n_hang > 2)
 print("Nodi non ottimali (nodo: n. figli): ",[{n: x-(ROOT_NODE!=n)*1} for (n,x) in mst.degree() if x > 2])
 V = G.number_of_nodes()
 E = G.number_of_edges()
@@ -95,7 +167,7 @@ print("|E| = ", E)
 
 # PROVA SALVATAGGIO
 timestamp =  datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
-filename = "TABU_{}_{}__cost_{}_{}.json".format(V, E, results["cost"], timestamp)
+filename = "ITERATED-HYBRID-TABU_{}_{}__cost_{}_{}.json".format(V, E, results["cost"], timestamp)
 with open("solutions/"+filename, "w+") as f:
     data = save_graph(mst)
     json.dump(data,f)
