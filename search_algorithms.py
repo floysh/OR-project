@@ -352,7 +352,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
                     deltaE = (cost_after-cost_best)
                     if iters_since_last_improvement > MAX_ITER_BEFORE_ASCEND and deltaE <= 3:  
                         if random.random() < 0.15:
-                            print("[INFO] S_{}, cost: {} (peggiora), last improvement: {} iters ago".format(iter,cost_after,iters_since_last_improvement))
+                            #print("[INFO] S_{}, cost: {} (peggiora), last improvement: {} iters ago".format(iter,cost_after,iters_since_last_improvement))
                             
                             if len(tabu_list) == TABU_SIZE:
                                 e = tabu_list.pop(0)
@@ -377,19 +377,6 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
                         # questa specie di tabu list secondaria, più restrittiva,
                         # che rende proibite le mosse cattive fino a quando non si migliora la f.o
                         ignore_list.append(new_e) 
-
-
-
-                    # DIVERSIFICAZIONE
-                    if iters_since_last_improvement > MAX_ITER_NO_IMPROVEMENT/3:
-                        # TODO: applica mossa di diversificazione
-                        True
-
-
-
-
-
-
 
 
     return {
