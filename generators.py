@@ -6,6 +6,21 @@ import time
 
 # CREAZIONE GRAFO e strutture
 
+# Grafo con tanti archi
+def dense(n, seed=None, **kwargs):
+    if seed == None:
+        print("[WARN] Random seed non impostato. Verrà scelto a caso")
+        
+    G = nx.barabasi_albert_graph(n=n, m=int(n/5), seed=seed)
+    
+    # Rendiamo il grafo non completo
+    G.remove_edges_from([ (1,4), (3,6), (5,3), (4,5)])
+    G.remove_edges_from([ 
+        (a,b) for a in range(n, int(n/2))
+            for b in [x for x in range(1,n-1) if (b+a) %3 != 0]
+    ])
+    return G
+
 # Grafo con non tanti archi
 # buon benchmark, non troppo lento, non troppo semplice da risolvere
 def sparse(n,m=3,seed=None):

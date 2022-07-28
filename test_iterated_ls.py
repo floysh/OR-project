@@ -5,7 +5,7 @@ from datetime import datetime
 from time import time as tick
 
 from shared import cost, build_depth_first_mst
-from generators import no_zero_cost, sparse
+from generators import no_zero_cost, sparse, dense
 from search_algorithms import local_search
 
 # PARAMETRI ISTANZA
