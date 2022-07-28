@@ -174,6 +174,7 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
     MAX_ITER = kwargs.get("MAX_ITER", 3000);
     MAX_ITER_NO_IMPROVEMENT = kwargs.get("MAX_ITER_NO_IMPROVEMENT",1000);
     MAX_ITER_BEFORE_ASCEND = kwargs.get("MAX_ITER_BEFORE_ASCEND", 450);
+    DIVERSIFICATION_BATCH_SIZE = kwargs.get("DIVERSIFICATION_BATCH", 15);
 
     # calcolo il grafo complementare all'MST
     outer_G = G.copy()
@@ -377,6 +378,57 @@ def tabu_search(G, start_solution, ROOT_NODE, TABU_SIZE=10, **kwargs):
                         # questa specie di tabu list secondaria, più restrittiva,
                         # che rende proibite le mosse cattive fino a quando non si migliora la f.o
                         ignore_list.append(new_e) 
+
+
+
+                    # Diversificazione/Intensificazione
+                    # tolgo un arco e lo sostituisco con 
+                    # un altro arco del taglio che si crea
+                    #
+                    # non posso usare robe come 
+                    # 2-opt o city swap perchè il grafo non è completo
+                    if iters_since_last_improvement % 20 == 0:
+                        non_optimal_nodes = [(n, {"degree": x-(ROOT_NODE!=n)*1}) for (n,x) in mst.degree() if x > 2 or (n == ROOT_NODE and x > 1)] # Nodi di grado 3 + la radice se ha grado 2
+                        non_optimal_nodes.sort(key=lambda x : x [1]["degree"], reverse=True) # sort by max degree
+
+                        for n1 in non_optimal_nodes[0:DIVERSIFICATION_BATCH_SIZE]:
+                            n1 = n1[0]
+                            for n2 in mst.adj[n1]:
+                                remove_candidate = (n1,n2)
+                                
+                                # non applicare l'equivalente di mosse proibite!
+                                if remove_candidate in tabu_list or (n2,n1) in tabu_list:
+                                    continue;
+
+                                temp = mst.copy() # necessario per evitare RuntimeError: dictionary changed size during iteration
+                                # Destroy 
+                                temp.remove_edges_from([remove_candidate]);
+
+                                # Repair
+                                pool = list(build_depth_first_mst(temp, remove_candidate[0]).nodes) # nodi raggiungibili da una delle estremità dell'arco rimosso
+                                cut = nx.edge_boundary(G, pool) # archi del taglio creatosi eliminando remove_candidate
+
+                                best_swap = {"out": remove_candidate, "in": remove_candidate, "cost": 2*cost_best}
+                                for insert_candidate in [e for e in cut if e != remove_candidate]:
+                                    temp.add_edges_from([insert_candidate])
+                                    deltaC = best_swap["cost"] - cost(temp, ROOT_NODE)
+                                    if deltaC > 0:
+                                        best_swap = {"out": remove_candidate, "in": insert_candidate, "cost": cost(temp, ROOT_NODE)}
+                                    temp.remove_edges_from([insert_candidate])
+
+                            # Applica mossa di diversificazione
+                            #print("[INFO] Perturbazione")
+                            #print("       out: {} in: {}".format(best_swap["out"],best_swap["in"]))
+                            mst.remove_edges_from([best_swap["out"]])
+                            mst.add_edges_from([best_swap["in"]])
+                            #print("[INFO] Costo: ",cost(mst,ROOT_NODE))
+
+                            # Aggiungi l'inverso alla tabu list
+                            if len(tabu_list) == TABU_SIZE:
+                                e = tabu_list.pop(0)
+                                out_candidates.append(e)
+                            tabu_list.append([best_swap["in"]]) # è proibito rimuovere l'arco che sostituisce remove_candidate!
+
 
 
     return {

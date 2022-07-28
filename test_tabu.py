@@ -16,7 +16,6 @@ ROOT_NODE = 7
 
 # PARAMETRI RICERCA
 TABU_SIZE = 15
-MAX_RESTART = 5
 MAX_ITER = 5000                  # arresta la ricerca dopo queste iterazioni (es. se il grafo è troppo grosso)
 MAX_ITER_BEFORE_ASCEND = 350
 MAX_ITER_NO_IMPROVEMENT = 500    # max. iterazioni su uno stallo
